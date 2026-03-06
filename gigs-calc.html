@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⭐ Gigs Calc</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   FOUNDATION
+═══════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --gold:       #f5c842;
+  --gold2:      #ffaa00;
+  --gold-glow:  rgba(245,200,66,.18);
+  --gold-soft:  rgba(245,200,66,.08);
+  --teal:       #00e5c3;
+  --teal-glow:  rgba(0,229,195,.15);
+  --red:        #ff4d6d;
+  --red-glow:   rgba(255,77,109,.14);
+  --blue:       #4d9fff;
+  --blue-glow:  rgba(77,159,255,.14);
+
+  --bg:         #080b14;
+  --bg2:        #0c1020;
+  --panel:      rgba(14,20,38,.85);
+  --panel2:     rgba(20,28,52,.7);
+  --border:     rgba(255,255,255,.07);
+  --border2:    rgba(255,255,255,.13);
+  --text:       #e8eeff;
+  --text2:      #8090b8;
+  --text3:      #3d4f7a;
+
+  --r:          16px;
+  --r-sm:       10px;
+  --ease:       cubic-bezier(.4,0,.2,1);
+}
+
+body{
+  font-family:'Outfit',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATED BACKGROUND
+═══════════════════════════════════════════ */
+.bg-canvas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+.bg-orb{
+  position:absolute;border-radius:50%;filter:blur(80px);opacity:.45;
+  animation:orbFloat 18s ease-in-out infinite;
+}
+.bg-orb:nth-child(1){width:600px;height:600px;background:radial-gradient(circle,rgba(245,200,66,.25),transparent 70%);top:-200px;left:-100px;animation-delay:0s;}
+.bg-orb:nth-child(2){width:500px;height:500px;background:radial-gradient(circle,rgba(0,229,195,.18),transparent 70%);bottom:-150px;right:-100px;animation-delay:-7s;}
+.bg-orb:nth-child(3){width:350px;height:350px;background:radial-gradient(circle,rgba(77,159,255,.15),transparent 70%);top:40%;left:50%;animation-delay:-13s;}
+
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(40px,-30px) scale(1.05);}
+  66%{transform:translate(-20px,40px) scale(.95);}
+}
+
+/* Stars grid texture */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px);
+  background-size:40px 40px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.wrap{position:relative;z-index:1;}
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar{
+  display:flex;align-items:center;gap:14px;
+  padding:0 28px;height:68px;
+  background:rgba(8,11,20,.8);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:100;
+}
+
+.logo{
+  display:flex;align-items:center;gap:10px;text-decoration:none;
+}
+.logo-gem{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,#ffe566,#f5a623);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  box-shadow:0 0 20px rgba(245,166,35,.45),inset 0 1px 0 rgba(255,255,255,.3);
+  animation:gemPulse 3s ease-in-out infinite;
+}
+@keyframes gemPulse{
+  0%,100%{box-shadow:0 0 20px rgba(245,166,35,.45),inset 0 1px 0 rgba(255,255,255,.3);}
+  50%{box-shadow:0 0 35px rgba(245,166,35,.7),inset 0 1px 0 rgba(255,255,255,.3);}
+}
+.logo-text{font-size:19px;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(135deg,#fff 30%,var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-tag{font-size:11px;color:var(--text3);font-weight:400;margin-top:1px;}
+
+.topbar-mid{flex:1;display:flex;justify-content:center;}
+
+/* LIVE TICKER */
+.ticker{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,229,195,.08);
+  border:1px solid rgba(0,229,195,.18);
+  border-radius:50px;padding:6px 16px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px;font-weight:600;color:var(--teal);
+  transition:all .3s;
+}
+.ticker.loading{background:rgba(255,255,255,.04);border-color:var(--border);color:var(--text3);}
+.ticker.error{background:var(--red-glow);border-color:rgba(255,77,109,.3);color:var(--red);}
+.tick-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:blink 1.8s ease infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}};
+
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.icon-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .2s;color:var(--text2);
+}
+.icon-btn:hover{background:rgba(255,255,255,.1);border-color:var(--border2);transform:scale(1.08);}
+
+.spin{animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ═══════════════════════════════════════════
+   LANG SWITCHER
+═══════════════════════════════════════════ */
+.lang-switcher{
+  display:flex;align-items:center;gap:4px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:50px;padding:3px 5px;
+}
+.lang-btn{
+  border:none;background:transparent;
+  color:var(--text3);font-size:12px;font-weight:600;
+  cursor:pointer;padding:4px 8px;border-radius:50px;
+  transition:all .18s;white-space:nowrap;
+  font-family:'Outfit',sans-serif;
+}
+.lang-btn:hover{background:rgba(255,255,255,.08);color:var(--text);}
+.lang-btn.active{background:rgba(245,200,66,.18);color:var(--gold);border:1px solid rgba(245,200,66,.3);}
+@media(max-width:640px){.lang-switcher{display:none;}}
+.lang-switcher-mobile{
+  display:none;
+  flex-wrap:wrap;gap:6px;justify-content:center;
+  padding:10px 20px;
+  background:rgba(8,11,20,.9);
+  border-bottom:1px solid var(--border);
+}
+@media(max-width:640px){.lang-switcher-mobile{display:flex;}}
+
+/* ═══════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════ */
+.main{max-width:1160px;margin:0 auto;padding:32px 20px 60px;}
+
+/* ═══════════════════════════════════════════
+   HERO RATES STRIP
+═══════════════════════════════════════════ */
+.rates-strip{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;
+  margin-bottom:28px;
+}
+@media(max-width:640px){.rates-strip{grid-template-columns:1fr;}}
+
+.rate-card{
+  position:relative;overflow:hidden;
+  border-radius:var(--r);padding:20px 22px;
+  border:1px solid var(--border);
+  background:var(--panel);
+  backdrop-filter:blur(16px);
+  transition:transform .2s,border-color .2s;
+}
+.rate-card:hover{transform:translateY(-2px);}
+.rate-card::before{
+  content:'';position:absolute;inset:0;border-radius:var(--r);
+  opacity:0;transition:opacity .3s;
+}
+.rate-card.gold{border-color:rgba(245,200,66,.2);}
+.rate-card.gold::before{background:radial-gradient(ellipse at top left,rgba(245,200,66,.08),transparent 60%);}
+.rate-card.gold:hover{border-color:rgba(245,200,66,.35);}
+.rate-card.gold:hover::before{opacity:1;}
+
+.rate-card.emerald{border-color:rgba(0,229,195,.15);}
+.rate-card.emerald::before{background:radial-gradient(ellipse at top left,rgba(0,229,195,.07),transparent 60%);}
+.rate-card.emerald:hover{border-color:rgba(0,229,195,.3);}
+.rate-card.emerald:hover::before{opacity:1;}
+
+.rate-card.sapphire{border-color:rgba(77,159,255,.15);}
+.rate-card.sapphire::before{background:radial-gradient(ellipse at top left,rgba(77,159,255,.07),transparent 60%);}
+.rate-card.sapphire:hover{border-color:rgba(77,159,255,.3);}
+.rate-card.sapphire:hover::before{opacity:1;}
+
+.rc-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 10px;border-radius:50px;margin-bottom:10px;
+}
+.badge-gold{background:rgba(245,200,66,.12);color:var(--gold);border:1px solid rgba(245,200,66,.2);}
+.badge-teal{background:rgba(0,229,195,.1);color:var(--teal);border:1px solid rgba(0,229,195,.18);}
+.badge-blue{background:rgba(77,159,255,.1);color:var(--blue);border:1px solid rgba(77,159,255,.2);}
+.badge-red{background:rgba(255,77,109,.1);color:var(--red);border:1px solid rgba(255,77,109,.2);}
+
+.rc-value{
+  font-family:'JetBrains Mono',monospace;
+  font-size:22px;font-weight:600;
+  line-height:1;margin-bottom:5px;
+}
+.gold-text{color:var(--gold);}
+.teal-text{color:var(--teal);}
+.blue-text{color:var(--blue);}
+.red-text{color:var(--red);}
+.rc-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.rc-icon{position:absolute;right:18px;top:18px;font-size:28px;opacity:.25;}
+
+/* WARNING BANNER */
+.warn-banner{
+  display:flex;gap:12px;align-items:flex-start;
+  background:rgba(255,170,0,.07);
+  border:1px solid rgba(255,170,0,.18);
+  border-radius:var(--r-sm);padding:13px 16px;
+  margin-bottom:28px;font-size:13px;line-height:1.6;color:#c49a30;
+}
+.warn-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.warn-banner strong{color:var(--gold);}
+
+/* ═══════════════════════════════════════════
+   SECTION LABEL
+═══════════════════════════════════════════ */
+.sec-label{
+  display:flex;align-items:center;gap:10px;
+  font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text3);margin:0 0 14px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-label span{display:flex;align-items:center;gap:6px;}
+
+/* ═══════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:760px){.grid-2{grid-template-columns:1fr;}}
+.full{grid-column:1/-1;}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:26px;
+  backdrop-filter:blur(16px);
+  position:relative;overflow:hidden;
+  transition:border-color .25s,box-shadow .25s;
+  animation:riseIn .5s var(--ease) both;
+}
+.card:nth-child(2){animation-delay:.08s;}
+.card:nth-child(3){animation-delay:.16s;}
+@keyframes riseIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* accent glow line on top */
+.card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:1.5px;
+  border-radius:var(--r) var(--r) 0 0;
+}
+.card-gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.card-teal::after{background:linear-gradient(90deg,transparent,var(--teal),transparent);}
+.card-blue::after{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.card-gold:hover{border-color:rgba(245,200,66,.25);box-shadow:0 0 40px rgba(245,200,66,.05);}
+.card-teal:hover{border-color:rgba(0,229,195,.2);box-shadow:0 0 40px rgba(0,229,195,.04);}
+.card-blue:hover{border-color:rgba(77,159,255,.2);box-shadow:0 0 40px rgba(77,159,255,.04);}
+
+.card-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.card-hdr-left{display:flex;align-items:center;gap:12px;}
+.card-ico{
+  width:42px;height:42px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  flex-shrink:0;
+}
+.ico-gold{background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.2);}
+.ico-teal{background:rgba(0,229,195,.1);border:1px solid rgba(0,229,195,.18);}
+.ico-blue{background:rgba(77,159,255,.1);border:1px solid rgba(77,159,255,.18);}
+.ico-red{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.18);}
+
+.card-title{font-size:16px;font-weight:700;letter-spacing:-.2px;}
+.card-sub{font-size:12px;color:var(--text3);margin-top:3px;}
+
+/* ═══════════════════════════════════════════
+   TABS (mode switcher)
+═══════════════════════════════════════════ */
+.tabs{
+  display:flex;background:rgba(0,0,0,.3);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:3px;margin-bottom:20px;
+}
+.tab{
+  flex:1;padding:8px;text-align:center;border-radius:8px;
+  font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;
+  transition:all .2s;
+}
+.tab.active-gold{background:rgba(245,200,66,.15);color:var(--gold);border:1px solid rgba(245,200,66,.2);}
+.tab.active-red{background:rgba(255,77,109,.12);color:var(--red);border:1px solid rgba(255,77,109,.18);}
+.tab:not(.active-gold):not(.active-red):hover{color:var(--text2);background:rgba(255,255,255,.04);}
+
+/* ═══════════════════════════════════════════
+   FIELD LABEL
+═══════════════════════════════════════════ */
+.flabel{
+  font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--text3);margin-bottom:8px;display:block;
+}
+
+/* ═══════════════════════════════════════════
+   CHIPS
+═══════════════════════════════════════════ */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.chip{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:50px;padding:5px 14px;
+  font-size:12.5px;font-weight:600;color:var(--text3);
+  cursor:pointer;transition:all .15s;user-select:none;
+}
+.chip:hover{background:rgba(245,200,66,.1);border-color:rgba(245,200,66,.3);color:var(--gold);}
+.chip.on{background:rgba(245,200,66,.15);border-color:rgba(245,200,66,.4);color:var(--gold);}
+
+/* ═══════════════════════════════════════════
+   INPUTS
+═══════════════════════════════════════════ */
+.ifield{position:relative;margin-bottom:16px;}
+.ifield .ipfx{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--text3);font-size:15px;pointer-events:none;z-index:1;
+}
+input[type=number]{
+  width:100%;
+  background:rgba(0,0,0,.35);
+  border:1.5px solid var(--border2);
+  border-radius:var(--r-sm);
+  padding:12px 14px 12px 38px;
+  font-family:'Outfit',sans-serif;
+  font-size:16px;font-weight:600;color:var(--text);
+  outline:none;
+  transition:border-color .15s,background .15s,box-shadow .15s;
+  -moz-appearance:textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]:focus{
+  border-color:var(--gold);
+  background:rgba(245,200,66,.04);
+  box-shadow:0 0 0 3px rgba(245,200,66,.08);
+}
+input[type=number]::placeholder{color:var(--text3);}
+
+/* ═══════════════════════════════════════════
+   SLIDER
+═══════════════════════════════════════════ */
+.slide-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+input[type=range]{
+  flex:1;height:3px;appearance:none;
+  background:rgba(255,255,255,.1);border-radius:2px;outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:20px;height:20px;border-radius:50%;
+  background:radial-gradient(circle,#fff 30%,var(--gold));
+  box-shadow:0 0 10px rgba(245,200,66,.6),0 2px 4px rgba(0,0,0,.4);
+  cursor:pointer;transition:transform .12s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.slide-badge{
+  min-width:46px;text-align:center;
+  background:rgba(245,200,66,.12);
+  border:1px solid rgba(245,200,66,.25);
+  color:var(--gold);border-radius:8px;
+  padding:4px 8px;font-family:'JetBrains Mono',monospace;
+  font-size:13px;font-weight:600;
+}
+
+/* ═══════════════════════════════════════════
+   TOGGLE
+═══════════════════════════════════════════ */
+.tog-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.tog-lbl{font-size:13px;color:var(--text2);}
+.tog{position:relative;width:46px;height:25px;cursor:pointer;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-track{
+  position:absolute;inset:0;border-radius:13px;
+  background:rgba(255,255,255,.1);border:1px solid var(--border);
+  transition:all .2s;
+}
+.tog input:checked+.tog-track{background:rgba(245,200,66,.25);border-color:rgba(245,200,66,.4);}
+.tog-thumb{
+  position:absolute;left:3px;top:3px;
+  width:19px;height:19px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4);
+  transition:transform .2s;
+}
+.tog input:checked~.tog-thumb{transform:translateX(21px);background:var(--gold);}
+
+/* ═══════════════════════════════════════════
+   DIVIDER
+═══════════════════════════════════════════ */
+.div{height:1px;background:var(--border);margin:18px 0;}
+
+/* ═══════════════════════════════════════════
+   RESULT TILES
+═══════════════════════════════════════════ */
+.rtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+@media(max-width:460px){.rtiles{grid-template-columns:1fr 1fr;}}
+
+.rtile{
+  border-radius:var(--r-sm);padding:14px 12px;text-align:center;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.3);
+  transition:transform .15s,border-color .15s;
+}
+.rtile:hover{transform:translateY(-2px);}
+.rt-gold{background:rgba(245,200,66,.06);border-color:rgba(245,200,66,.18);}
+.rt-teal{background:rgba(0,229,195,.05);border-color:rgba(0,229,195,.15);}
+.rt-red{background:rgba(255,77,109,.06);border-color:rgba(255,77,109,.18);}
+.rt-blue{background:rgba(77,159,255,.05);border-color:rgba(77,159,255,.15);}
+
+.rlabel{font-size:9.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
+.rvalue{
+  font-family:'JetBrains Mono',monospace;
+  font-size:17px;font-weight:600;line-height:1;
+}
+.rv-gold{color:var(--gold);}
+.rv-teal{color:var(--teal);}
+.rv-red{color:var(--red);}
+.rv-blue{color:var(--blue);}
+.rsub{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* ═══════════════════════════════════════════
+   INFO ROWS
+═══════════════════════════════════════════ */
+.irow{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;
+}
+.irow:last-child{border-bottom:none;padding-bottom:0;}
+.irow-l{color:var(--text2);}
+.irow-v{font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+.v-gold{color:var(--gold);}
+.v-teal{color:var(--teal);}
+.v-red{color:var(--red);}
+.v-blue{color:var(--blue);}
+
+/* ═══════════════════════════════════════════
+   HERO NUMBER
+═══════════════════════════════════════════ */
+.hero-block{text-align:center;padding:10px 0 14px;}
+.hero-n{
+  font-family:'Outfit',sans-serif;
+  font-size:64px;font-weight:800;
+  line-height:1;letter-spacing:-3px;
+  background:linear-gradient(135deg,#fff 20%,var(--teal) 80%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px rgba(0,229,195,.3));
+}
+.hero-u{font-size:13px;color:var(--text3);margin-top:6px;letter-spacing:.3px;}
+
+/* ═══════════════════════════════════════════
+   PROGRESS
+═══════════════════════════════════════════ */
+.prog-wrap{margin-top:14px;}
+.prog-head{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text3);margin-bottom:6px;}
+.prog-track{height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;}
+.prog-bar{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--teal),#00c896);
+  box-shadow:0 0 8px rgba(0,229,195,.4);
+  transition:width .6s var(--ease);
+}
+
+/* ═══════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════ */
+.tbl-scroll{overflow-x:auto;border-radius:var(--r-sm);}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+thead tr{background:rgba(255,255,255,.03);}
+th{
+  padding:12px 16px;text-align:left;
+  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text3);border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2);}
+tr:last-child td{border-bottom:none;}
+tbody tr{transition:background .15s;}
+tbody tr:hover td{background:rgba(255,255,255,.03);color:var(--text);}
+.td-n{font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace;}
+.td-g{color:var(--teal);font-weight:600;font-family:'JetBrains Mono',monospace;}
+.td-b{color:var(--blue);font-weight:600;font-family:'JetBrains Mono',monospace;}
+.td-gold{color:var(--gold);font-weight:600;font-family:'JetBrains Mono',monospace;}
+
+/* row number badge */
+.row-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:36px;height:22px;border-radius:6px;
+  background:rgba(255,255,255,.06);
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+}
+
+/* ═══════════════════════════════════════════
+   GOAL GRID INNER
+═══════════════════════════════════════════ */
+.goal-inner{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:580px){.goal-inner{grid-template-columns:1fr;}}
+
+/* ═══════════════════════════════════════════
+   SCROLL ANIMATIONS
+═══════════════════════════════════════════ */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.reveal.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<div class="bg-canvas">
+  <div class="bg-orb"></div>
+  <div class="bg-orb"></div>
+  <div class="bg-orb"></div>
+</div>
+<div class="bg-grid"></div>
+
+<div class="wrap">
+
+<!-- ── TOPBAR ── -->
+<header class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-gem">⭐</div>
+    <div>
+      <div class="logo-text">Gigs Calc</div>
+      <div class="logo-tag" data-i18n="logo_tag">Telegram Stars Calculator</div>
+    </div>
+  </a>
+
+  <div class="topbar-mid">
+    <div class="ticker loading" id="livePill">
+      <div class="tick-dot"></div>
+      <span id="liveText" data-i18n="loading_rate">Загружаю курс...</span>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="lang-switcher">
+      <button class="lang-btn" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn active" onclick="setLang('uk')">UA</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('sk')">SK</button>
+      <button class="lang-btn" onclick="setLang('ja')">JA</button>
+      <button class="lang-btn" onclick="setLang('my')">MY</button>
+    </div>
+    <button class="icon-btn" id="refreshBtn" onclick="fetchTonPrice()">
+      <span id="refreshIco">↻</span>
+    </button>
+  </div>
+</header>
+<!-- MOBILE LANG SWITCHER -->
+<div class="lang-switcher-mobile">
+  <button class="lang-btn" onclick="setLang('ru')">🇷🇺 RU</button>
+  <button class="lang-btn active" onclick="setLang('uk')">🇺🇦 UA</button>
+  <button class="lang-btn" onclick="setLang('en')">🇬🇧 EN</button>
+  <button class="lang-btn" onclick="setLang('sk')">🇸🇰 SK</button>
+  <button class="lang-btn" onclick="setLang('ja')">🇯🇵 JA</button>
+  <button class="lang-btn" onclick="setLang('my')">🇲🇲 MY</button>
+</div>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- RATES STRIP -->
+  <div class="rates-strip reveal">
+    <div class="rate-card gold">
+      <div class="rc-icon">📈</div>
+      <div class="rc-badge badge-teal" data-i18n="sell_badge">▲ Продаю ⭐ боту</div>
+      <div class="rc-value teal-text" id="buyUsdDisplay">$0.0157 / ⭐</div>
+      <div class="rc-sub" id="buyTonDisplay">≈ загрузка TON...</div>
+    </div>
+    <div class="rate-card emerald">
+      <div class="rc-icon">📉</div>
+      <div class="rc-badge badge-red" data-i18n="buy_badge">▼ Покупаю ⭐ у бота</div>
+      <div class="rc-value red-text" id="sellUsdDisplay">$0.0112 / ⭐</div>
+      <div class="rc-sub" id="sellTonDisplay">≈ загрузка TON...</div>
+    </div>
+    <div class="rate-card sapphire">
+      <div class="rc-icon">💎</div>
+      <div class="rc-badge badge-blue">◈ TON / USD · Live</div>
+      <div class="rc-value blue-text" id="tonUsdDisplay" data-i18n="loading">Загрузка...</div>
+      <div class="rc-sub" id="tonLastUpdate" data-i18n="updating">обновляется...</div>
+    </div>
+  </div>
+
+  <!-- WARNING -->
+  <div class="warn-banner reveal">
+    <div class="warn-icon">⚠️</div>
+    <div>
+      <strong data-i18n="warn_title">Важно знать:</strong> <span data-i18n="warn_body">при обмене звёзд через канал или бот Telegram удерживает <strong>15% комиссии</strong> и устанавливает <strong>21-дневный холд</strong>. Бот переводит TON сразу — с учётом этой комиссии и небольшой сервисной надбавки.</span>
+    </div>
+  </div>
+
+  <!-- ── CONVERTER + MULTIACCOUNTS ── -->
+  <div class="sec-label reveal"><span data-i18n="sec_calculator">⚡ Калькулятор</span></div>
+  <div class="grid-2 reveal">
+
+    <!-- CONVERTER -->
+    <div class="card card-gold">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-ico ico-gold">💱</div>
+          <div>
+            <div class="card-title" data-i18n="conv_title">Конвертер</div>
+            <div class="card-sub" data-i18n="conv_sub">Stars ↔ TON · комиссия Telegram</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active-gold" id="tabBuy" onclick="setMode('buy')" data-i18n="tab_sell_stars">📈 Продаю ⭐ боту</div>
+        <div class="tab" id="tabSell" onclick="setMode('sell')" data-i18n="tab_buy_stars">📉 Покупаю ⭐</div>
+      </div>
+
+      <label class="flabel" data-i18n="stars_count">Количество звёзд</label>
+      <div class="chips">
+        <div class="chip" onclick="setStars(50)">50 ⭐</div>
+        <div class="chip on" onclick="setStars(100)">100 ⭐</div>
+        <div class="chip" onclick="setStars(500)">500 ⭐</div>
+        <div class="chip" onclick="setStars(1000)">1K ⭐</div>
+        <div class="chip" onclick="setStars(5000)">5K ⭐</div>
+      </div>
+      <div class="ifield">
+        <span class="ipfx">⭐</span>
+        <input type="number" id="starsInput" value="100" min="1" oninput="calcConverter()">
+      </div>
+
+      <label class="flabel" data-i18n="or_enter_ton">Или введи TON</label>
+      <div class="ifield">
+        <span class="ipfx">💎</span>
+        <input type="number" id="tonInput" placeholder="0.000" step="0.001" oninput="calcFromTon()">
+      </div>
+
+      <div class="tog-row">
+        <span class="tog-lbl" data-i18n="fee_toggle">Вычесть 15% комиссию Telegram</span>
+        <label class="tog">
+          <input type="checkbox" id="feeToggle" checked onchange="calcConverter()">
+          <span class="tog-track"></span>
+          <span class="tog-thumb"></span>
+        </label>
+      </div>
+
+      <div class="div"></div>
+
+      <div class="rtiles">
+        <div class="rtile rt-blue">
+          <div class="rlabel">TON gross</div>
+          <div class="rvalue rv-blue" id="tonGross">—</div>
+        </div>
+        <div class="rtile rt-red">
+          <div class="rlabel" data-i18n="fee_label">Комиссия</div>
+          <div class="rvalue rv-red" id="feeVal">—</div>
+        </div>
+        <div class="rtile rt-teal">
+          <div class="rlabel" data-i18n="ton_net">TON чистые</div>
+          <div class="rvalue rv-teal" id="tonNet">—</div>
+        </div>
+        <div class="rtile rt-gold">
+          <div class="rlabel" data-i18n="in_usd">В USD</div>
+          <div class="rvalue rv-gold" id="usdNet">—</div>
+        </div>
+        <div class="rtile">
+          <div class="rlabel" data-i18n="price_1star">Цена 1 ⭐</div>
+          <div class="rvalue" style="color:var(--text);font-size:13px" id="pricePerStar">—</div>
+        </div>
+        <div class="rtile" id="modeTile">
+          <div class="rlabel" data-i18n="mode_label">Режим</div>
+          <div class="rvalue rv-gold" style="font-size:11px" id="modeDisplay" data-i18n="mode_sale">Продажа</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MULTIACCOUNTS -->
+    <div class="card card-teal">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-ico ico-teal">👥</div>
+          <div>
+            <div class="card-title" data-i18n="multi_title">Мультиаккаунт</div>
+            <div class="card-sub" data-i18n="multi_sub">Доход с нескольких аккаунтов</div>
+          </div>
+        </div>
+      </div>
+
+      <label class="flabel" data-i18n="stars_per_day_acc">Звёзд с 1 аккаунта / день</label>
+      <div class="chips" id="dchips">
+        <div class="chip" onclick="setDaily(1)">1 ⭐/день</div>
+        <div class="chip on" onclick="setDaily(2)">2 ⭐/день</div>
+        <div class="chip" onclick="setDaily(3)">3 ⭐/день</div>
+      </div>
+      <div class="slide-row">
+        <input type="range" id="dailySlider" min="1" max="3" value="2" step="1" oninput="syncDaily()">
+        <div class="slide-badge" id="dailyBadge">2</div>
+      </div>
+
+      <label class="flabel" data-i18n="accs_count">Количество аккаунтов</label>
+      <div class="ifield">
+        <span class="ipfx">👤</span>
+        <input type="number" id="accsInput" value="10" min="1" oninput="calcAccs()">
+      </div>
+
+      <label class="flabel" data-i18n="withdraw_threshold">Порог вывода (мин. ⭐)</label>
+      <div class="ifield">
+        <span class="ipfx">⭐</span>
+        <input type="number" id="threshInput" value="100" min="1" oninput="calcAccs()">
+      </div>
+
+      <div class="div"></div>
+
+      <div class="rtiles">
+        <div class="rtile rt-gold">
+          <div class="rlabel" data-i18n="stars_day">⭐/день</div>
+          <div class="rvalue rv-gold" id="spd">—</div>
+          <div class="rsub" data-i18n="all_accs">все акк.</div>
+        </div>
+        <div class="rtile rt-gold">
+          <div class="rlabel" data-i18n="stars_month">⭐/мес</div>
+          <div class="rvalue rv-gold" id="spm">—</div>
+          <div class="rsub" data-i18n="30days">30 дней</div>
+        </div>
+        <div class="rtile rt-teal">
+          <div class="rlabel" data-i18n="ton_month">TON/мес</div>
+          <div class="rvalue rv-teal" id="tpm">—</div>
+          <div class="rsub" data-i18n="net">чистыми</div>
+        </div>
+      </div>
+
+      <div class="irow">
+        <span class="irow-l" data-i18n="to_first_withdraw">До первого вывода</span>
+        <span class="irow-v v-blue" id="d2w">—</span>
+      </div>
+      <div class="irow">
+        <span class="irow-l" data-i18n="usd_month">USD / месяц (всего)</span>
+        <span class="irow-v v-teal" id="usdm">—</span>
+      </div>
+      <div class="irow">
+        <span class="irow-l" data-i18n="withdrawals_month">Выводов в месяц</span>
+        <span class="irow-v" id="wpm">—</span>
+      </div>
+    </div>
+
+  </div><!-- /grid-2 -->
+
+  <!-- ── GOAL ── -->
+  <div class="sec-label reveal" style="margin-top:28px"><span data-i18n="sec_goal">🏆 Цель</span></div>
+  <div class="card card-blue full reveal">
+    <div class="card-hdr">
+      <div class="card-hdr-left">
+        <div class="card-ico ico-blue">🎯</div>
+        <div>
+          <div class="card-title" data-i18n="goal_title">Калькулятор цели</div>
+          <div class="card-sub" data-i18n="goal_sub">Сколько аккаунтов нужно для желаемого дохода</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="goal-inner">
+      <div>
+        <label class="flabel" data-i18n="goal_ton_month">Цель · TON / месяц</label>
+        <div class="chips">
+          <div class="chip" onclick="setGoal(1)">1 TON</div>
+          <div class="chip" onclick="setGoal(5)">5 TON</div>
+          <div class="chip" onclick="setGoal(10)">10 TON</div>
+          <div class="chip" onclick="setGoal(50)">50 TON</div>
+        </div>
+        <div class="ifield">
+          <span class="ipfx">💎</span>
+          <input type="number" id="goalTon" value="5" min="0.1" step="0.1" oninput="calcGoal()">
+        </div>
+        <label class="flabel" style="margin-top:4px" data-i18n="or_in_usd">Или в USD</label>
+        <div class="chips">
+          <div class="chip" onclick="setGoalU(10)">$10</div>
+          <div class="chip" onclick="setGoalU(50)">$50</div>
+          <div class="chip" onclick="setGoalU(100)">$100</div>
+          <div class="chip" onclick="setGoalU(500)">$500</div>
+        </div>
+        <div class="ifield">
+          <span class="ipfx">$</span>
+          <input type="number" id="goalUsd" placeholder="авто" step="1" oninput="calcGoalU()">
+        </div>
+      </div>
+
+      <div>
+        <div class="hero-block">
+          <div class="hero-n" id="neededN">—</div>
+          <div class="hero-u" data-i18n="accs_needed">аккаунтов нужно</div>
+        </div>
+        <div class="prog-wrap">
+          <div class="prog-head">
+            <span data-i18n="progress_to_goal">Прогресс к цели</span>
+            <span id="progLabel">0 / —</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-bar" id="progBar" style="width:0%"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="irow">
+            <span class="irow-l" data-i18n="goal_in_usd">Цель в USD</span>
+            <span class="irow-v v-teal" id="goalUsdShow">—</span>
+          </div>
+          <div class="irow">
+            <span class="irow-l" data-i18n="current_income">Текущий доход</span>
+            <span class="irow-v v-blue" id="curIncome">— TON</span>
+          </div>
+          <div class="irow">
+            <span class="irow-l" data-i18n="missing_accs">Не хватает</span>
+            <span class="irow-v v-red" id="missAcc">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABLE ── -->
+  <div class="sec-label reveal" style="margin-top:28px"><span data-i18n="sec_table">📊 Таблица доходности</span></div>
+  <div class="card card-teal full reveal">
+    <div class="card-hdr">
+      <div class="card-hdr-left">
+        <div class="card-ico ico-teal">📈</div>
+        <div>
+          <div class="card-title" data-i18n="table_title">Доходность по аккаунтам</div>
+          <div class="card-sub" data-i18n="table_sub">Курс бота · минус 15% комиссия Telegram</div>
+        </div>
+      </div>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="th_accs">Акк.</th><th data-i18n="th_stars_day">⭐/день</th><th data-i18n="th_stars_month">⭐/мес</th>
+            <th>TON gross</th><th>TON net</th><th data-i18n="th_usd_month">USD/мес</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ACCOUNT PURCHASE CALCULATOR ── -->
+  <div class="sec-label reveal" style="margin-top:28px"><span data-i18n="sec_buy">🛒 Калькулятор покупки аккаунтов</span></div>
+  <div class="card card-gold full reveal" id="buyCard">
+
+    <!-- glow decoration -->
+    <div style="position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(245,200,66,.09),transparent 70%);border-radius:50%;pointer-events:none;"></div>
+
+    <div class="card-hdr">
+      <div class="card-hdr-left">
+        <div class="card-ico ico-gold">🛍️</div>
+        <div>
+          <div class="card-title" data-i18n="buy_card_title">Покупка аккаунтов со звёздами</div>
+          <div class="card-sub" data-i18n="buy_card_sub">Цена 1 аккаунта = 35 грн · окупаемость и чистая прибыль</div>
+        </div>
+      </div>
+      <div class="rc-badge badge-gold" style="align-self:flex-start" data-i18n="one_acc_price">1 акк = 35 ₴</div>
+    </div>
+
+    <div class="grid-2" style="gap:20px">
+      <!-- LEFT: inputs -->
+      <div>
+        <label class="flabel" data-i18n="accs_count">Количество аккаунтов</label>
+        <div class="chips" id="buyChips">
+          <div class="chip" onclick="setBuyAccs(10)">10</div>
+          <div class="chip" onclick="setBuyAccs(25)">25</div>
+          <div class="chip on" onclick="setBuyAccs(50)">50</div>
+          <div class="chip" onclick="setBuyAccs(100)">100</div>
+          <div class="chip" onclick="setBuyAccs(250)">250</div>
+        </div>
+        <div class="ifield">
+          <span class="ipfx">👤</span>
+          <input type="number" id="buyAccsInput" value="50" min="1" oninput="calcBuy()">
+        </div>
+
+        <label class="flabel" data-i18n="price_per_acc">Цена 1 аккаунта (грн)</label>
+        <div class="ifield">
+          <span class="ipfx">₴</span>
+          <input type="number" id="pricePerAccInput" value="35" min="1" oninput="calcBuy()">
+        </div>
+
+        <label class="flabel" style="display:flex;align-items:center;gap:8px;">
+          <span data-i18n="uah_rate">Курс UAH / USD</span>
+          <span id="uahLivePill" style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,195,.08);border:1px solid rgba(0,229,195,.18);border-radius:50px;padding:2px 10px;font-size:10px;font-weight:600;color:var(--teal);">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 1.8s ease infinite;display:inline-block;"></span>
+            <span id="uahLiveText" data-i18n="loading">Загрузка...</span>
+          </span>
+        </label>
+        <div class="chips" id="uahChips">
+          <div class="chip" onclick="setUah(40)">40</div>
+          <div class="chip" onclick="setUah(41.5)">41.5</div>
+          <div class="chip" onclick="setUah(42)">42</div>
+          <div class="chip" onclick="setUah(43)">43</div>
+        </div>
+        <div class="ifield">
+          <span class="ipfx">₴/$</span>
+          <input type="number" id="uahRateInput" value="41.5" min="1" step="0.1" oninput="calcBuy()">
+        </div>
+      </div>
+
+      <!-- RIGHT: results -->
+      <div>
+        <!-- big cost -->
+        <div style="background:rgba(245,200,66,.05);border:1px solid rgba(245,200,66,.15);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;" data-i18n="total_cost">Общая стоимость</div>
+          <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;">
+            <div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--gold);letter-spacing:-1px;" id="totalUah">—</span>
+              <span style="font-size:16px;color:var(--text3);margin-left:3px;">₴</span>
+            </div>
+            <div style="font-size:20px;color:var(--text3);">=</div>
+            <div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--teal);letter-spacing:-1px;" id="totalUsd">—</span>
+              <span style="font-size:14px;color:var(--text3);margin-left:3px;">USD</span>
+            </div>
+            <div style="font-size:20px;color:var(--text3);">=</div>
+            <div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--blue);letter-spacing:-1px;" id="totalTon">—</span>
+              <span style="font-size:14px;color:var(--text3);margin-left:3px;">TON</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rtiles" style="grid-template-columns:repeat(2,1fr);">
+          <div class="rtile rt-gold">
+            <div class="rlabel" data-i18n="payback">Окупаемость</div>
+            <div class="rvalue rv-gold" id="paybackDays">—</div>
+            <div class="rsub" data-i18n="days">дней</div>
+          </div>
+          <div class="rtile rt-teal">
+            <div class="rlabel" data-i18n="payback">Окупаемость</div>
+            <div class="rvalue rv-teal" id="paybackMonths">—</div>
+            <div class="rsub" data-i18n="months">месяцев</div>
+          </div>
+          <div class="rtile rt-blue">
+            <div class="rlabel" data-i18n="income_month">Доход/мес</div>
+            <div class="rvalue rv-blue" id="buyIncomeUsd">—</div>
+            <div class="rsub" data-i18n="usd_net">USD чистыми</div>
+          </div>
+          <div class="rtile" style="background:rgba(255,77,109,.05);border-color:rgba(255,77,109,.15);">
+            <div class="rlabel" data-i18n="roi_30">ROI за 30 дн.</div>
+            <div class="rvalue" id="roi30" style="color:var(--red);">—</div>
+            <div class="rsub" data-i18n="roi_pct">% от вложений</div>
+          </div>
+        </div>
+
+        <!-- payback timeline bar -->
+        <div style="margin-top:4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px;">
+            <span data-i18n="payback_progress">Прогресс окупаемости (1 мес)</span>
+            <span id="paybackPct">—%</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-bar" id="paybackBar" style="width:0%;background:linear-gradient(90deg,var(--gold),var(--gold2));box-shadow:0 0 8px rgba(245,200,66,.4);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BREAKEVEN TABLE -->
+    <div style="margin-top:24px;">
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span data-i18n="inv_table">📋 Таблица инвестиций</span>
+        <span style="flex:1;height:1px;background:var(--border);display:block;"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="th_accs">Акк.</th>
+              <th data-i18n="th_cost_uah">Стоимость ₴</th>
+              <th data-i18n="th_cost_usd">Стоимость $</th>
+              <th data-i18n="th_cost_ton">Стоимость TON</th>
+              <th data-i18n="th_income_ton">Доход/мес TON</th>
+              <th data-i18n="th_income_usd">Доход/мес $</th>
+              <th data-i18n="th_payback">Окупаемость</th>
+            </tr>
+          </thead>
+          <tbody id="buyTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /buyCard -->
+
+</main>
+</div><!-- /wrap -->
+
+<script>
+/* ── HELPERS ── */
+const $ = id => document.getElementById(id);
+const fmt = (n,d=4) => (+n).toFixed(d);
+const fmtN = n => Math.round(n).toLocaleString('ru');
+
+/* ── STATE ── */
+let tonPrice = null;
+let daily    = 2;
+let mode     = 'buy';
+const FEE    = 0.15;
+const BUY_USD  = 0.0157;
+const SELL_USD = 0.0112;
+
+/* ── LIVE PRICE ── */
+async function fetchTonPrice() {
+  const pill = $('livePill');
+  const ico  = $('refreshIco');
+  pill.className = 'ticker loading';
+  $('liveText').textContent = t('loading_short');
+  ico.className = 'spin';
+
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    tonPrice = d['the-open-network'].usd;
+
+    pill.className = 'ticker';
+    $('liveText').textContent = '1 TON = $' + tonPrice.toFixed(3);
+    $('tonUsdDisplay').textContent = '$' + tonPrice.toFixed(3);
+    $('tonLastUpdate').textContent  = t('updated_at') + new Date().toLocaleTimeString();
+    $('buyTonDisplay').textContent  = '≈ ' + (BUY_USD/tonPrice).toFixed(5)  + ' TON / ⭐';
+    $('sellTonDisplay').textContent = '≈ ' + (SELL_USD/tonPrice).toFixed(5) + ' TON / ⭐';
+    recalc();
+  } catch(e) {
+    pill.className = 'ticker error';
+    $('liveText').textContent = t('err_retry');
+    $('tonUsdDisplay').textContent = t('err_label');
+    tonPrice = 5.5;
+    recalc();
+  }
+  ico.className = '';
+}
+
+/* ── CONVERSION ── */
+function usdPerStar() { return mode === 'buy' ? BUY_USD : SELL_USD; }
+function toTon(stars) { return tonPrice ? (stars * usdPerStar()) / tonPrice : 0; }
+function net(v)       { return $('feeToggle').checked ? v*(1-FEE) : v; }
+function netStars(s)  { return net(toTon(s)); }
+
+/* ── MODE ── */
+function setMode(m) {
+  mode = m;
+  $('tabBuy').className  = 'tab' + (m==='buy'  ? ' active-gold' : '');
+  $('tabSell').className = 'tab' + (m==='sell' ? ' active-red'  : '');
+  $('modeDisplay').textContent = m==='buy' ? t('mode_sale')+' ⭐' : t('mode_purchase')+' ⭐';
+  recalc();
+}
+
+/* ── CONVERTER ── */
+function setStars(v) {
+  $('starsInput').value = v;
+  document.querySelectorAll('.chips:first-of-type .chip').forEach(c => {
+    c.classList.toggle('on', c.onclick && c.onclick.toString().includes(`(${v})`));
+  });
+  calcConverter();
+}
+function calcConverter() { $('tonInput').value=''; updateConv(parseFloat($('starsInput').value)||0); }
+function calcFromTon()   {
+  const ton = parseFloat($('tonInput').value)||0;
+  if(!tonPrice||!ton) return;
+  const s = Math.round(ton/(usdPerStar()/tonPrice));
+  $('starsInput').value = s;
+  updateConv(s);
+}
+function updateConv(s) {
+  const g = toTon(s), f = g*FEE, n = net(g);
+  const usd = tonPrice ? n*tonPrice : 0;
+  $('tonGross').textContent   = fmt(g,4);
+  $('feeVal').textContent     = $('feeToggle').checked ? fmt(f,4) : '0';
+  $('tonNet').textContent     = fmt(n,4);
+  $('usdNet').textContent     = tonPrice ? '$'+fmt(usd,2) : '—';
+  $('pricePerStar').textContent = s>0 ? fmt(n/s,5)+' TON' : '—';
+}
+
+/* ── DAILY ── */
+function setDaily(v) {
+  daily = v;
+  $('dailySlider').value = v;
+  $('dailyBadge').textContent = v;
+  document.querySelectorAll('#dchips .chip').forEach((c,i)=>c.classList.toggle('on',i+1===v));
+  calcAccs(); calcGoal(); buildTable();
+}
+function syncDaily() { setDaily(+$('dailySlider').value); }
+
+/* ── ACCOUNTS ── */
+function calcAccs() {
+  const accs = +$('accsInput').value||1;
+  const thr  = +$('threshInput').value||100;
+  const pd   = accs*daily, pm = pd*30;
+  const ton  = netStars(pm);
+  const usd  = tonPrice ? ton*tonPrice : null;
+
+  $('spd').textContent  = fmtN(pd);
+  $('spm').textContent  = fmtN(pm);
+  $('tpm').textContent  = fmt(ton,3);
+  $('usdm').textContent = usd!==null ? '$'+fmt(usd,2) : '—';
+  const dw = Math.ceil(thr/daily);
+  $('d2w').textContent  = dw+' '+t('days_short');
+  $('wpm').textContent  = Math.floor(30/dw)*accs;
+  calcGoal();
+}
+
+/* ── GOAL ── */
+function setGoal(v)  { $('goalTon').value=v; $('goalUsd').value=''; calcGoal(); }
+function setGoalU(v) { $('goalUsd').value=v; if(tonPrice) $('goalTon').value=(v/tonPrice).toFixed(2); calcGoal(); }
+function calcGoalU() { const u=parseFloat($('goalUsd').value); if(u&&tonPrice) $('goalTon').value=(u/tonPrice).toFixed(2); calcGoal(); }
+function calcGoal() {
+  const goal = parseFloat($('goalTon').value)||1;
+  const accs = +$('accsInput').value||1;
+  const nps  = netStars(1);
+  const needed = nps>0 ? Math.ceil(goal/(nps*daily*30)) : 0;
+  const cur    = netStars(accs*daily*30);
+  const miss   = Math.max(0,needed-accs);
+
+  $('neededN').textContent   = fmtN(needed);
+  $('goalUsdShow').textContent = tonPrice ? '$'+fmt(goal*tonPrice,2) : '—';
+  $('curIncome').textContent = fmt(cur,3)+' TON';
+  $('missAcc').textContent   = miss>0 ? fmtN(miss)+' '+t('acc_short') : t('goal_reached');
+  $('missAcc').className     = 'irow-v '+(miss===0?'v-teal':'v-red');
+
+  const pct = needed>0 ? Math.min(100,(accs/needed)*100) : 0;
+  $('progBar').style.width = pct+'%';
+  $('progLabel').textContent = fmtN(accs)+' / '+fmtN(needed);
+}
+
+/* ── TABLE ── */
+function buildTable() {
+  const rows = [1,5,10,25,50,100,250,500,1000];
+  $('tbody').innerHTML = rows.map(n => {
+    const pd=n*daily, pm=pd*30;
+    const g=toTon(pm), nt=g*(1-FEE);
+    const usd=tonPrice ? nt*tonPrice : null;
+    return `<tr>
+      <td><span class="row-badge td-n">${fmtN(n)}</span></td>
+      <td>${fmtN(pd)}</td>
+      <td>${fmtN(pm)}</td>
+      <td class="td-b">${fmt(g,3)}</td>
+      <td class="td-g">${fmt(nt,3)}</td>
+      <td class="td-gold">${usd!==null?'$'+fmt(usd,2):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── LIVE UAH RATE ── */
+async function fetchUahRate() {
+  const pill = $('uahLivePill');
+  const txt  = $('uahLiveText');
+  txt.textContent = t('loading_short');
+  try {
+    // exchangerate-api free endpoint (no key needed for basic)
+    const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    const rate = d.rates['UAH'];
+    if (!rate) throw 0;
+    const rounded = +rate.toFixed(2);
+    $('uahRateInput').value = rounded;
+    txt.textContent = '₴' + rounded + ' · live';
+    pill.style.background = 'rgba(0,229,195,.08)';
+    pill.style.color = 'var(--teal)';
+    pill.style.borderColor = 'rgba(0,229,195,.18)';
+    // mark all chips off since we have live rate
+    document.querySelectorAll('#uahChips .chip').forEach(c => c.classList.remove('on'));
+    calcBuy();
+  } catch(e) {
+    txt.textContent = t('err_label');
+    pill.style.background = 'rgba(255,77,109,.1)';
+    pill.style.color = 'var(--red)';
+    pill.style.borderColor = 'rgba(255,77,109,.2)';
+  }
+}
+
+/* ── BUY CALCULATOR ── */
+function setBuyAccs(v) {
+  $('buyAccsInput').value = v;
+  document.querySelectorAll('#buyChips .chip').forEach(c => {
+    c.classList.toggle('on', c.onclick && c.onclick.toString().includes(`(${v})`));
+  });
+  calcBuy();
+}
+function setUah(v) {
+  $('uahRateInput').value = v;
+  document.querySelectorAll('#uahChips .chip').forEach(c => {
+    c.classList.toggle('on', c.onclick && c.onclick.toString().includes(`(${v})`));
+  });
+  calcBuy();
+}
+function calcBuy() {
+  const accs       = +$('buyAccsInput').value  || 1;
+  const priceUah   = +$('pricePerAccInput').value || 35;
+  const uahRate    = +$('uahRateInput').value  || 41.5;
+
+  const totalUah = accs * priceUah;
+  const totalUsd = totalUah / uahRate;
+  const totalTon = tonPrice ? totalUsd / tonPrice : null;
+
+  $('totalUah').textContent = fmtN(totalUah);
+  $('totalUsd').textContent = fmt(totalUsd, 2);
+  $('totalTon').textContent = totalTon !== null ? fmt(totalTon, 2) : '—';
+
+  // monthly income from these accounts
+  const incTon = netStars(accs * daily * 30);
+  const incUsd = tonPrice ? incTon * tonPrice : null;
+
+  $('buyIncomeUsd').textContent = incUsd !== null ? '$' + fmt(incUsd, 2) : '—';
+
+  // payback in days
+  const incUsdDay = incUsd !== null ? incUsd / 30 : null;
+  const payDays   = incUsdDay && incUsdDay > 0 ? Math.ceil(totalUsd / incUsdDay) : null;
+  const payMonths = payDays ? (payDays / 30).toFixed(1) : null;
+
+  $('paybackDays').textContent   = payDays   !== null ? payDays   : '—';
+  $('paybackMonths').textContent = payMonths !== null ? payMonths : '—';
+
+  // ROI 30 days
+  const roi = incUsd !== null && totalUsd > 0 ? ((incUsd / totalUsd) * 100) : null;
+  $('roi30').textContent = roi !== null ? fmt(roi, 1) + '%' : '—';
+  $('roi30').style.color = roi !== null && roi >= 10 ? 'var(--teal)' : 'var(--red)';
+
+  // payback progress bar (vs 30 days)
+  const pct = payDays ? Math.min(100, (30 / payDays) * 100) : 0;
+  $('paybackBar').style.width = pct + '%';
+  $('paybackPct').textContent = fmt(pct, 1) + '%';
+
+  buildBuyTable(priceUah, uahRate);
+}
+
+function buildBuyTable(priceUah, uahRate) {
+  const rows = [1, 5, 10, 25, 50, 100, 250, 500, 1000];
+  $('buyTbody').innerHTML = rows.map(n => {
+    const uah    = n * priceUah;
+    const usd    = uah / uahRate;
+    const ton    = tonPrice ? usd / tonPrice : null;
+    const incTon = netStars(n * daily * 30);
+    const incUsd = tonPrice ? incTon * tonPrice : null;
+    const incDay = incUsd ? incUsd / 30 : null;
+    const pb     = incDay && incDay > 0 ? Math.ceil(usd / incDay) : null;
+    const pbStr  = pb ? (pb > 365 ? '>'+Math.floor(pb/30)+' '+t('months_short') : pb+' '+t('days_short')) : '—';
+    return `<tr>
+      <td><span class="row-badge td-n">${fmtN(n)}</span></td>
+      <td class="td-gold">${fmtN(uah)} ₴</td>
+      <td class="td-b">$${fmt(usd,2)}</td>
+      <td class="td-b">${ton!==null ? fmt(ton,2)+' TON' : '—'}</td>
+      <td class="td-g">${fmt(incTon,3)} TON</td>
+      <td class="td-g">${incUsd!==null ? '$'+fmt(incUsd,2) : '—'}</td>
+      <td style="color:var(--gold);font-weight:600;font-family:'JetBrains Mono',monospace;">${pbStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── RECALC ALL ── */
+function recalc() {
+  updateConv(parseFloat($('starsInput').value)||100);
+  calcAccs(); calcGoal(); buildTable(); calcBuy();
+}
+
+/* ═══════════════════════════════════════════
+   i18n LOCALISATION
+═══════════════════════════════════════════ */
+const LANGS = {
+  ru: {
+    logo_tag:'Telegram Stars Calculator',
+    loading_rate:'Загружаю курс...',
+    loading:'Загрузка...',
+    updating:'обновляется...',
+    sell_badge:'▲ Продаю ⭐ боту',
+    buy_badge:'▼ Покупаю ⭐ у бота',
+    warn_title:'Важно знать:',
+    warn_body:'при обмене звёзд через канал или бот Telegram удерживает <strong>15% комиссии</strong> и устанавливает <strong>21-дневный холд</strong>. Бот переводит TON сразу — с учётом этой комиссии и небольшой сервисной надбавки.',
+    sec_calculator:'⚡ Калькулятор',
+    conv_title:'Конвертер',
+    conv_sub:'Stars ↔ TON · комиссия Telegram',
+    tab_sell_stars:'📈 Продаю ⭐ боту',
+    tab_buy_stars:'📉 Покупаю ⭐',
+    stars_count:'Количество звёзд',
+    or_enter_ton:'Или введи TON',
+    fee_toggle:'Вычесть 15% комиссию Telegram',
+    fee_label:'Комиссия',
+    ton_net:'TON чистые',
+    in_usd:'В USD',
+    price_1star:'Цена 1 ⭐',
+    mode_label:'Режим',
+    mode_sale:'Продажа',
+    mode_purchase:'Покупка',
+    multi_title:'Мультиаккаунт',
+    multi_sub:'Доход с нескольких аккаунтов',
+    stars_per_day_acc:'Звёзд с 1 аккаунта / день',
+    accs_count:'Количество аккаунтов',
+    withdraw_threshold:'Порог вывода (мин. ⭐)',
+    stars_day:'⭐/день',
+    all_accs:'все акк.',
+    stars_month:'⭐/мес',
+    '30days':'30 дней',
+    ton_month:'TON/мес',
+    net:'чистыми',
+    to_first_withdraw:'До первого вывода',
+    usd_month:'USD / месяц (всего)',
+    withdrawals_month:'Выводов в месяц',
+    sec_goal:'🏆 Цель',
+    goal_title:'Калькулятор цели',
+    goal_sub:'Сколько аккаунтов нужно для желаемого дохода',
+    goal_ton_month:'Цель · TON / месяц',
+    or_in_usd:'Или в USD',
+    accs_needed:'аккаунтов нужно',
+    progress_to_goal:'Прогресс к цели',
+    goal_in_usd:'Цель в USD',
+    current_income:'Текущий доход',
+    missing_accs:'Не хватает',
+    goal_reached:'✅ Цель достигнута!',
+    sec_table:'📊 Таблица доходности',
+    table_title:'Доходность по аккаунтам',
+    table_sub:'Курс бота · минус 15% комиссия Telegram',
+    th_accs:'Акк.',th_stars_day:'⭐/день',th_stars_month:'⭐/мес',th_usd_month:'USD/мес',
+    sec_buy:'🛒 Калькулятор покупки аккаунтов',
+    buy_card_title:'Покупка аккаунтов со звёздами',
+    buy_card_sub:'Цена 1 аккаунта = 35 грн · окупаемость и чистая прибыль',
+    one_acc_price:'1 акк = 35 ₴',
+    price_per_acc:'Цена 1 аккаунта (грн)',
+    uah_rate:'Курс UAH / USD',
+    total_cost:'Общая стоимость',
+    payback:'Окупаемость',
+    days:'дней',months:'месяцев',
+    income_month:'Доход/мес',
+    usd_net:'USD чистыми',
+    roi_30:'ROI за 30 дн.',
+    roi_pct:'% от вложений',
+    payback_progress:'Прогресс окупаемости (1 мес)',
+    inv_table:'📋 Таблица инвестиций',
+    th_cost_uah:'Стоимость ₴',th_cost_usd:'Стоимость $',th_cost_ton:'Стоимость TON',
+    th_income_ton:'Доход/мес TON',th_income_usd:'Доход/мес $',th_payback:'Окупаемость',
+    refresh_title:'Обновить курс',
+    err_retry:'Ошибка — нажми ↻',
+    err_label:'Ошибка',
+    loading_short:'Загружаю...',
+    updated_at:'обновлено ',
+    days_short:'дн.',
+    months_short:'мес',
+    acc_short:'акк.',
+    goal_reached:'✅ Цель достигнута!',
+  },
+  uk: {
+    logo_tag:'Калькулятор Telegram Stars',
+    loading_rate:'Завантажую курс...',
+    loading:'Завантаження...',
+    updating:'оновлюється...',
+    sell_badge:'▲ Продаю ⭐ боту',
+    buy_badge:'▼ Купую ⭐ у бота',
+    warn_title:'Важливо знати:',
+    warn_body:'при обміні зірок через канал або бот Telegram утримує <strong>15% комісії</strong> та встановлює <strong>21-денний холд</strong>. Бот переводить TON одразу — з урахуванням цієї комісії та невеликої сервісної надбавки.',
+    sec_calculator:'⚡ Калькулятор',
+    conv_title:'Конвертер',
+    conv_sub:'Stars ↔ TON · комісія Telegram',
+    tab_sell_stars:'📈 Продаю ⭐ боту',
+    tab_buy_stars:'📉 Купую ⭐',
+    stars_count:'Кількість зірок',
+    or_enter_ton:'Або введи TON',
+    fee_toggle:'Відняти 15% комісію Telegram',
+    fee_label:'Комісія',
+    ton_net:'TON чисті',
+    in_usd:'В USD',
+    price_1star:'Ціна 1 ⭐',
+    mode_label:'Режим',
+    mode_sale:'Продаж',
+    mode_purchase:'Купівля',
+    multi_title:'Мультиакаунт',
+    multi_sub:'Дохід з кількох акаунтів',
+    stars_per_day_acc:'Зірок з 1 акаунта / день',
+    accs_count:'Кількість акаунтів',
+    withdraw_threshold:'Поріг виводу (мін. ⭐)',
+    stars_day:'⭐/день',
+    all_accs:'всі акк.',
+    stars_month:'⭐/міс',
+    '30days':'30 днів',
+    ton_month:'TON/міс',
+    net:'чистими',
+    to_first_withdraw:'До першого виводу',
+    usd_month:'USD / місяць (всього)',
+    withdrawals_month:'Виводів на місяць',
+    sec_goal:'🏆 Ціль',
+    goal_title:'Калькулятор цілі',
+    goal_sub:'Скільки акаунтів потрібно для бажаного доходу',
+    goal_ton_month:'Ціль · TON / місяць',
+    or_in_usd:'Або в USD',
+    accs_needed:'акаунтів потрібно',
+    progress_to_goal:'Прогрес до цілі',
+    goal_in_usd:'Ціль в USD',
+    current_income:'Поточний дохід',
+    missing_accs:'Не вистачає',
+    goal_reached:'✅ Ціль досягнута!',
+    sec_table:'📊 Таблиця дохідності',
+    table_title:'Дохідність по акаунтах',
+    table_sub:'Курс бота · мінус 15% комісія Telegram',
+    th_accs:'Акк.',th_stars_day:'⭐/день',th_stars_month:'⭐/міс',th_usd_month:'USD/міс',
+    sec_buy:'🛒 Калькулятор купівлі акаунтів',
+    buy_card_title:'Купівля акаунтів із зірками',
+    buy_card_sub:'Ціна 1 акаунта = 35 грн · окупність і чистий прибуток',
+    one_acc_price:'1 акк = 35 ₴',
+    price_per_acc:'Ціна 1 акаунта (грн)',
+    uah_rate:'Курс UAH / USD',
+    total_cost:'Загальна вартість',
+    payback:'Окупність',
+    days:'днів',months:'місяців',
+    income_month:'Дохід/міс',
+    usd_net:'USD чистими',
+    roi_30:'ROI за 30 дн.',
+    roi_pct:'% від вкладень',
+    payback_progress:'Прогрес окупності (1 міс)',
+    inv_table:'📋 Таблиця інвестицій',
+    th_cost_uah:'Вартість ₴',th_cost_usd:'Вартість $',th_cost_ton:'Вартість TON',
+    th_income_ton:'Дохід/міс TON',th_income_usd:'Дохід/міс $',th_payback:'Окупність',
+    refresh_title:'Оновити курс',
+    err_retry:'Помилка — натисни ↻',
+    err_label:'Помилка',
+    loading_short:'Завантажую...',
+    updated_at:'оновлено ',
+    days_short:'дн.',
+    months_short:'міс',
+    acc_short:'акк.',
+  },
+  en: {
+    logo_tag:'Telegram Stars Calculator',
+    loading_rate:'Loading rate...',
+    loading:'Loading...',
+    updating:'updating...',
+    sell_badge:'▲ Selling ⭐ to bot',
+    buy_badge:'▼ Buying ⭐ from bot',
+    warn_title:'Important:',
+    warn_body:'when exchanging stars via a Telegram channel or bot, Telegram deducts <strong>15% fee</strong> and sets a <strong>21-day hold</strong>. The bot sends TON immediately — accounting for the fee and a small service markup.',
+    sec_calculator:'⚡ Calculator',
+    conv_title:'Converter',
+    conv_sub:'Stars ↔ TON · Telegram fee',
+    tab_sell_stars:'📈 Sell ⭐ to bot',
+    tab_buy_stars:'📉 Buy ⭐',
+    stars_count:'Number of stars',
+    or_enter_ton:'Or enter TON',
+    fee_toggle:'Deduct 15% Telegram fee',
+    fee_label:'Fee',
+    ton_net:'TON net',
+    in_usd:'In USD',
+    price_1star:'Price per ⭐',
+    mode_label:'Mode',
+    mode_sale:'Selling',
+    mode_purchase:'Buying',
+    multi_title:'Multi-account',
+    multi_sub:'Income from multiple accounts',
+    stars_per_day_acc:'Stars per account / day',
+    accs_count:'Number of accounts',
+    withdraw_threshold:'Withdrawal threshold (min ⭐)',
+    stars_day:'⭐/day',
+    all_accs:'all accs',
+    stars_month:'⭐/mo',
+    '30days':'30 days',
+    ton_month:'TON/mo',
+    net:'net',
+    to_first_withdraw:'To first withdrawal',
+    usd_month:'USD / month (total)',
+    withdrawals_month:'Withdrawals per month',
+    sec_goal:'🏆 Goal',
+    goal_title:'Goal Calculator',
+    goal_sub:'How many accounts needed for desired income',
+    goal_ton_month:'Goal · TON / month',
+    or_in_usd:'Or in USD',
+    accs_needed:'accounts needed',
+    progress_to_goal:'Progress to goal',
+    goal_in_usd:'Goal in USD',
+    current_income:'Current income',
+    missing_accs:'Missing',
+    goal_reached:'✅ Goal reached!',
+    sec_table:'📊 Yield Table',
+    table_title:'Yield by accounts',
+    table_sub:'Bot rate · minus 15% Telegram fee',
+    th_accs:'Accs',th_stars_day:'⭐/day',th_stars_month:'⭐/mo',th_usd_month:'USD/mo',
+    sec_buy:'🛒 Account Purchase Calculator',
+    buy_card_title:'Buying accounts with stars',
+    buy_card_sub:'Price per account = 35 UAH · payback and net profit',
+    one_acc_price:'1 acc = 35 ₴',
+    price_per_acc:'Price per account (UAH)',
+    uah_rate:'UAH / USD rate',
+    total_cost:'Total cost',
+    payback:'Payback',
+    days:'days',months:'months',
+    income_month:'Income/mo',
+    usd_net:'USD net',
+    roi_30:'ROI in 30 days',
+    roi_pct:'% of investment',
+    payback_progress:'Payback progress (1 mo)',
+    inv_table:'📋 Investment Table',
+    th_cost_uah:'Cost ₴',th_cost_usd:'Cost $',th_cost_ton:'Cost TON',
+    th_income_ton:'Income/mo TON',th_income_usd:'Income/mo $',th_payback:'Payback',
+    refresh_title:'Refresh rate',
+    err_retry:'Error — click ↻',
+    err_label:'Error',
+    loading_short:'Loading...',
+    updated_at:'updated ',
+    days_short:'d',
+    months_short:'mo',
+    acc_short:'acc.',
+  },
+  sk: {
+    logo_tag:'Kalkulačka Telegram Stars',
+    loading_rate:'Načítavam kurz...',
+    loading:'Načítavanie...',
+    updating:'aktualizuje sa...',
+    sell_badge:'▲ Predávam ⭐ botovi',
+    buy_badge:'▼ Kupujem ⭐ od bota',
+    warn_title:'Dôležité:',
+    warn_body:'pri výmene hviezdičiek cez kanál alebo bota Telegram strhne <strong>15% poplatok</strong> a nastaví <strong>21-dňové zdržanie</strong>. Bot posiela TON okamžite — vrátane tohto poplatku a malej servisnej prirážky.',
+    sec_calculator:'⚡ Kalkulačka',
+    conv_title:'Konvertor',
+    conv_sub:'Stars ↔ TON · poplatok Telegram',
+    tab_sell_stars:'📈 Predávam ⭐ botovi',
+    tab_buy_stars:'📉 Kupujem ⭐',
+    stars_count:'Počet hviezdičiek',
+    or_enter_ton:'Alebo zadaj TON',
+    fee_toggle:'Odpočítať 15% poplatok Telegram',
+    fee_label:'Poplatok',
+    ton_net:'TON čisté',
+    in_usd:'V USD',
+    price_1star:'Cena 1 ⭐',
+    mode_label:'Režim',
+    mode_sale:'Predaj',
+    mode_purchase:'Nákup',
+    multi_title:'Multi-účet',
+    multi_sub:'Príjem z viacerých účtov',
+    stars_per_day_acc:'Hviezdičky na 1 účet / deň',
+    accs_count:'Počet účtov',
+    withdraw_threshold:'Limit výberu (min ⭐)',
+    stars_day:'⭐/deň',
+    all_accs:'všetky účty',
+    stars_month:'⭐/mes',
+    '30days':'30 dní',
+    ton_month:'TON/mes',
+    net:'čisté',
+    to_first_withdraw:'Do prvého výberu',
+    usd_month:'USD / mesiac (spolu)',
+    withdrawals_month:'Výbery za mesiac',
+    sec_goal:'🏆 Cieľ',
+    goal_title:'Kalkulačka cieľa',
+    goal_sub:'Koľko účtov treba na želaný príjem',
+    goal_ton_month:'Cieľ · TON / mesiac',
+    or_in_usd:'Alebo v USD',
+    accs_needed:'účtov potrebných',
+    progress_to_goal:'Postup k cieľu',
+    goal_in_usd:'Cieľ v USD',
+    current_income:'Aktuálny príjem',
+    missing_accs:'Chýba',
+    goal_reached:'✅ Cieľ dosiahnutý!',
+    sec_table:'📊 Tabuľka výnosnosti',
+    table_title:'Výnosnosť podľa účtov',
+    table_sub:'Kurz bota · mínus 15% poplatok Telegram',
+    th_accs:'Účty',th_stars_day:'⭐/deň',th_stars_month:'⭐/mes',th_usd_month:'USD/mes',
+    sec_buy:'🛒 Kalkulačka nákupu účtov',
+    buy_card_title:'Nákup účtov s hviezdičkami',
+    buy_card_sub:'Cena 1 účtu = 35 UAH · návratnosť a čistý zisk',
+    one_acc_price:'1 účet = 35 ₴',
+    price_per_acc:'Cena 1 účtu (UAH)',
+    uah_rate:'Kurz UAH / USD',
+    total_cost:'Celková cena',
+    payback:'Návratnosť',
+    days:'dní',months:'mesiacov',
+    income_month:'Príjem/mes',
+    usd_net:'USD čisté',
+    roi_30:'ROI za 30 dní',
+    roi_pct:'% z investície',
+    payback_progress:'Postup návratnosti (1 mes)',
+    inv_table:'📋 Investičná tabuľka',
+    th_cost_uah:'Cena ₴',th_cost_usd:'Cena $',th_cost_ton:'Cena TON',
+    th_income_ton:'Príjem/mes TON',th_income_usd:'Príjem/mes $',th_payback:'Návratnosť',
+    refresh_title:'Aktualizovať kurz',
+    err_retry:'Chyba — klikni ↻',
+    err_label:'Chyba',
+    loading_short:'Načítavam...',
+    updated_at:'aktualizované ',
+    days_short:'d',
+    months_short:'mes',
+    acc_short:'účet',
+  },
+  ja: {
+    logo_tag:'Telegram スター 計算機',
+    loading_rate:'レートを読み込み中...',
+    loading:'読み込み中...',
+    updating:'更新中...',
+    sell_badge:'▲ ⭐をボットに売る',
+    buy_badge:'▼ ボットから⭐を買う',
+    warn_title:'重要事項：',
+    warn_body:'Telegramのチャンネルまたはボットでスターを交換する際、Telegramは<strong>15%の手数料</strong>を差し引き、<strong>21日間のホールド</strong>を設定します。ボットはこの手数料と少額のサービス料を考慮した上で、TONをすぐに送金します。',
+    sec_calculator:'⚡ 計算機',
+    conv_title:'コンバーター',
+    conv_sub:'Stars ↔ TON · Telegram手数料',
+    tab_sell_stars:'📈 ⭐をボットに売る',
+    tab_buy_stars:'📉 ⭐を買う',
+    stars_count:'スターの数',
+    or_enter_ton:'またはTONを入力',
+    fee_toggle:'15%のTelegram手数料を差し引く',
+    fee_label:'手数料',
+    ton_net:'TON純額',
+    in_usd:'USD換算',
+    price_1star:'⭐1個の価格',
+    mode_label:'モード',
+    mode_sale:'売却',
+    mode_purchase:'購入',
+    multi_title:'マルチアカウント',
+    multi_sub:'複数アカウントからの収入',
+    stars_per_day_acc:'1アカウントあたりのスター / 日',
+    accs_count:'アカウント数',
+    withdraw_threshold:'出金しきい値 (最小 ⭐)',
+    stars_day:'⭐/日',
+    all_accs:'全アカ',
+    stars_month:'⭐/月',
+    '30days':'30日間',
+    ton_month:'TON/月',
+    net:'純額',
+    to_first_withdraw:'初回出金まで',
+    usd_month:'USD / 月（合計）',
+    withdrawals_month:'月間出金回数',
+    sec_goal:'🏆 目標',
+    goal_title:'目標計算機',
+    goal_sub:'希望収入に必要なアカウント数',
+    goal_ton_month:'目標 · TON / 月',
+    or_in_usd:'またはUSDで',
+    accs_needed:'アカウントが必要',
+    progress_to_goal:'目標への進捗',
+    goal_in_usd:'目標（USD）',
+    current_income:'現在の収入',
+    missing_accs:'不足',
+    goal_reached:'✅ 目標達成！',
+    sec_table:'📊 収益テーブル',
+    table_title:'アカウント別収益',
+    table_sub:'ボットレート · Telegram手数料15%控除',
+    th_accs:'アカ',th_stars_day:'⭐/日',th_stars_month:'⭐/月',th_usd_month:'USD/月',
+    sec_buy:'🛒 アカウント購入計算機',
+    buy_card_title:'スター付きアカウントの購入',
+    buy_card_sub:'1アカウント = 35 UAH · 回収期間と純利益',
+    one_acc_price:'1アカ = 35 ₴',
+    price_per_acc:'1アカウントの価格（UAH）',
+    uah_rate:'UAH / USD レート',
+    total_cost:'合計コスト',
+    payback:'回収期間',
+    days:'日',months:'ヶ月',
+    income_month:'収入/月',
+    usd_net:'USD純額',
+    roi_30:'30日ROI',
+    roi_pct:'投資対比 %',
+    payback_progress:'回収進捗（1ヶ月）',
+    inv_table:'📋 投資テーブル',
+    th_cost_uah:'費用 ₴',th_cost_usd:'費用 $',th_cost_ton:'費用 TON',
+    th_income_ton:'収入/月 TON',th_income_usd:'収入/月 $',th_payback:'回収期間',
+    refresh_title:'レートを更新',
+    err_retry:'エラー — ↻をクリック',
+    err_label:'エラー',
+    loading_short:'読み込み中...',
+    updated_at:'更新済み ',
+    days_short:'日',
+    months_short:'ヶ月',
+    acc_short:'アカ.',
+  },
+  my: {
+    logo_tag:'Telegram Stars တွက်ချက်မှု',
+    loading_rate:'နှုန်းထား ဖတ်နေသည်...',
+    loading:'ဖတ်နေသည်...',
+    updating:'အပ်ဒိတ်လုပ်နေသည်...',
+    sell_badge:'▲ ⭐ ကို bot သို့ ရောင်းသည်',
+    buy_badge:'▼ bot မှ ⭐ ဝယ်သည်',
+    warn_title:'အရေးကြီးသောအချက်:',
+    warn_body:'Telegram channel သို့မဟုတ် bot မှတဆင့် ကြယ်များလဲလှယ်သည့်အခါ Telegram သည် <strong>15% ကော်မရှင်</strong> နှုတ်ယူပြီး <strong>ရက် ၂၁ ရက် hold</strong> သတ်မှတ်သည်။ Bot သည် ဤကော်မရှင်နှင့် ဝန်ဆောင်မှုကြေး အနည်းငယ်ကို ထည့်တွက်ကာ TON ကို ချက်ချင်းပေးပို့သည်။',
+    sec_calculator:'⚡ တွက်ချက်မှု',
+    conv_title:'ပြောင်းလဲမှု',
+    conv_sub:'Stars ↔ TON · Telegram ကော်မရှင်',
+    tab_sell_stars:'📈 ⭐ ရောင်းရန်',
+    tab_buy_stars:'📉 ⭐ ဝယ်ရန်',
+    stars_count:'ကြယ်အရေအတွက်',
+    or_enter_ton:'သို့မဟုတ် TON ထည့်ပါ',
+    fee_toggle:'15% Telegram ကော်မရှင် နှုတ်ပါ',
+    fee_label:'ကော်မရှင်',
+    ton_net:'TON အသားတင်',
+    in_usd:'USD ဖြင့်',
+    price_1star:'⭐ တစ်ခုစျေးနှုန်း',
+    mode_label:'မုဒ်',
+    mode_sale:'ရောင်းရန်',
+    mode_purchase:'ဝယ်ရန်',
+    multi_title:'အကောင့်အများအပြား',
+    multi_sub:'အကောင့်များမှ ဝင်ငွေ',
+    stars_per_day_acc:'အကောင့် ၁ ခုမှ ကြယ် / နေ့',
+    accs_count:'အကောင့်အရေအတွက်',
+    withdraw_threshold:'ထုတ်ယူမှုနှုန်းစ (အနည်းဆုံး ⭐)',
+    stars_day:'⭐/နေ့',
+    all_accs:'အကောင့်အားလုံး',
+    stars_month:'⭐/လ',
+    '30days':'ရက် ၃၀',
+    ton_month:'TON/လ',
+    net:'အသားတင်',
+    to_first_withdraw:'ပထမဆုံးထုတ်ယူရန်',
+    usd_month:'USD / လ (စုစုပေါင်း)',
+    withdrawals_month:'တစ်လ ထုတ်ယူမှုအကြိမ်',
+    sec_goal:'🏆 ရည်မှန်းချက်',
+    goal_title:'ရည်မှန်းချက် တွက်ချက်မှု',
+    goal_sub:'လိုချင်သောဝင်ငွေအတွက် အကောင့်မည်မျှလိုသည်',
+    goal_ton_month:'ရည်မှန်းချက် · TON / လ',
+    or_in_usd:'သို့မဟုတ် USD ဖြင့်',
+    accs_needed:'အကောင့်လိုအပ်သည်',
+    progress_to_goal:'ရည်မှန်းချက်သို့ တိုးတက်မှု',
+    goal_in_usd:'USD ရည်မှန်းချက်',
+    current_income:'လက်ရှိဝင်ငွေ',
+    missing_accs:'လိုအပ်သည်',
+    goal_reached:'✅ ရည်မှန်းချက်ရောက်ပြီ!',
+    sec_table:'📊 ဝင်ငွေဇယား',
+    table_title:'အကောင့်အလိုက် ဝင်ငွေ',
+    table_sub:'Bot နှုန်း · Telegram 15% ကော်မရှင် နှုတ်ပြီး',
+    th_accs:'အကောင့်',th_stars_day:'⭐/နေ့',th_stars_month:'⭐/လ',th_usd_month:'USD/လ',
+    sec_buy:'🛒 အကောင့်ဝယ်ယူမှု တွက်ချက်မှု',
+    buy_card_title:'ကြယ်ပါ အကောင့်ဝယ်ယူခြင်း',
+    buy_card_sub:'အကောင့်တစ်ခု = ၃၅ UAH · ပြန်ရမည့်ကာလ နှင့် အမြတ်',
+    one_acc_price:'အကောင့် ၁ = 35 ₴',
+    price_per_acc:'အကောင့်တစ်ခုစျေးနှုန်း (UAH)',
+    uah_rate:'UAH / USD နှုန်းထား',
+    total_cost:'စုစုပေါင်းကုန်ကျငွေ',
+    payback:'ပြန်ရမည့်ကာလ',
+    days:'ရက်',months:'လ',
+    income_month:'ဝင်ငွေ/လ',
+    usd_net:'USD အသားတင်',
+    roi_30:'ရက် ၃၀ ROI',
+    roi_pct:'ရင်းနှီးငွေ %',
+    payback_progress:'ပြန်ရမှုတိုးတက်မှု (၁ လ)',
+    inv_table:'📋 ရင်းနှီးမြုပ်နှံမှုဇယား',
+    th_cost_uah:'ကုန်ကျ ₴',th_cost_usd:'ကုန်ကျ $',th_cost_ton:'ကုန်ကျ TON',
+    th_income_ton:'ဝင်ငွေ/လ TON',th_income_usd:'ဝင်ငွေ/လ $',th_payback:'ပြန်ရချိန်',
+    refresh_title:'နှုန်းထားရယူမည်',
+    err_retry:'အမှားတွေ့ — ↻ နှိပ်ပါ',
+    err_label:'အမှား',
+    loading_short:'ဖတ်နေသည်...',
+    updated_at:'အပ်ဒိတ်လုပ်ပြီး ',
+    days_short:'ရက်',
+    months_short:'လ',
+    acc_short:'အကောင့်',
+  }
+};
+
+let currentLang = 'ru';
+
+function t(key) {
+  return (LANGS[currentLang] && LANGS[currentLang][key]) || (LANGS['ru'][key]) || key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  // update active button state in both desktop and mobile switchers
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    const btnLang = btn.getAttribute('onclick').match(/'(\w+)'/)?.[1];
+    btn.classList.toggle('active', btnLang === lang);
+  });
+  // update html lang attribute
+  document.documentElement.lang = lang;
+  // translate all elements with data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.innerHTML = val;
+  });
+  // update dynamic/computed text
+  $('refreshBtn').title = t('refresh_title');
+  // re-apply mode display
+  $('modeDisplay').textContent = mode==='buy' ? t('mode_sale')+' ⭐' : t('mode_purchase')+' ⭐';
+  $('tabBuy').textContent  = t('tab_sell_stars');
+  $('tabSell').textContent = t('tab_buy_stars');
+  // re-run recalc to refresh dynamic strings in d2w, missAcc etc.
+  recalc();
+}
+
+// Initialize default language
+document.addEventListener('DOMContentLoaded', () => setLang('ru'));
+
+/* ── SCROLL REVEAL ── */
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+/* ── INIT ── */
+fetchTonPrice();
+fetchUahRate();
+setInterval(fetchTonPrice, 60000);
+setInterval(fetchUahRate, 300000); // refresh UAH every 5 min
+calcBuy();
+</script>
+</body>
+</html>
